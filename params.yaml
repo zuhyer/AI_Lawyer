@@ -1,3 +1,4 @@
-  chunk_size: 1000
-  chunk_overlap: 200
-  add_start_index: true
+chunkingparams:  
+   chunk_size: 1000
+   chunk_overlap: 200
+   add_start_index: true

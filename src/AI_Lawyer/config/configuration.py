@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from AI_Lawyer.utils.common import read_yaml, create_directories
 from AI_Lawyer.utils.logging_setup import *
-from AI_Lawyer.entity.config_entity import DataConfig
+from AI_Lawyer.entity.config_entity import DataConfig, ChunkingConfig
 from AI_Lawyer.constants import *
 
 class ConfigurationMannager:
@@ -24,3 +24,16 @@ class ConfigurationMannager:
             source_url=config['source_url']  # ✅ This stays as a list
         )
         return data_config
+
+    def get_chunking_config(self) -> ChunkingConfig:
+        config = self.params['chunkingparams']
+
+        chunking_config = ChunkingConfig(
+            chunk_size = config['chunk_size'],
+            chunk_overlap = config['chunk_overlap']
+        )
+
+        return chunking_config
+        
+    
+    

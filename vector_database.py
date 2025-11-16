@@ -1,6 +1,6 @@
 from AI_Lawyer.utils.logging_setup import *
 from langchain_community.document_loaders import PDFPlumberLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_ollama import OllamaEmbeddings
 from langchain_community.vectorstores import FAISS
 

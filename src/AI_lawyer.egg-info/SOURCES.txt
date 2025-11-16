@@ -3,12 +3,16 @@ README.md
 setup.py
 src/AI_Lawyer/__init__.py
 src/AI_Lawyer/components/__init__.py
+src/AI_Lawyer/components/data_ingestion.py
 src/AI_Lawyer/config/__init__.py
 src/AI_Lawyer/config/configuration.py
 src/AI_Lawyer/constants/__init__.py
 src/AI_Lawyer/entity/__init__.py
+src/AI_Lawyer/entity/config_entity.py
 src/AI_Lawyer/pipeline/__init__.py
+src/AI_Lawyer/pipeline/stage01_data_ingestion.py
 src/AI_Lawyer/utils/__init__.py
+src/AI_Lawyer/utils/common.py
 src/AI_Lawyer/utils/logging_setup.py
 src/AI_lawyer.egg-info/PKG-INFO
 src/AI_lawyer.egg-info/SOURCES.txt
