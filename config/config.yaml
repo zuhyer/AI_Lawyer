@@ -58,13 +58,15 @@ data:
     - "https://drive.google.com/file/d/1qCW-xgaA4Nt5g3bskG95N4MKy-SGY54q/view"
     - "https://www.jhalsa.org/pdfs/Reading_Materials/SC_Judgements_FamilyMatters1.pdf"
 
+
 embedding:
   model: "deepseek-r1:1.5b"
   vector_store: "FAISS"
   vector_store_path: "models/vector_store"
+  api_key: "!secret Emedding_models_API_Key"
 
 llm:
   provider: "groq"
   model: "deepseek-r1-distill-llama-70b"
-
+  api_key: "!secret response_model_API_Key"
 
