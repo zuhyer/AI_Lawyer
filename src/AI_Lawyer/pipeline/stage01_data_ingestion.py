@@ -1,4 +1,4 @@
-from AI_Lawyer.config.configuration import ConfigurationMannager
+from AI_Lawyer.config.configuration import ConfigurationManager
 from AI_Lawyer.components.data_ingestion import DataIngestion  # assuming this is saved as a component
 from AI_Lawyer.utils.logging_setup import logger
 
@@ -9,7 +9,7 @@ def start_data_ingestion():
     try:
         logger.info("Starting Data Ingestion Pipeline")
 
-        config_manager = ConfigurationMannager()
+        config_manager = ConfigurationManager()
         data_config = config_manager.get_data_ingestion_config()
 
         ingestion = DataIngestion(config=data_config)

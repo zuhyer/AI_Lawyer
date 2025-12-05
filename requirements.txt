@@ -7,4 +7,8 @@ langchain_ollama
 langchain_groq
 faiss-cpu
 pdfplumber
+ensure
+python-box
 -e .
+sentence-transformers
+numpy

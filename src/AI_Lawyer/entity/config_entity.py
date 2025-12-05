@@ -15,11 +15,13 @@ class EmbeddingConfig:
     model: str
     vector_store: str
     vector_store_path: str
+    api_key: str
 
 @dataclass(frozen= True)
 class LLMConfig:
     provider: str
     model: str
+    api_key: str
 
 @dataclass(frozen= True)
 class ChunkingConfig:

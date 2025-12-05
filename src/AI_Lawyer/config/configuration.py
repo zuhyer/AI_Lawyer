@@ -2,10 +2,10 @@ import os
 from pathlib import Path
 from AI_Lawyer.utils.common import read_yaml, create_directories
 from AI_Lawyer.utils.logging_setup import *
-from AI_Lawyer.entity.config_entity import DataConfig, ChunkingConfig
+from AI_Lawyer.entity.config_entity import DataConfig, ChunkingConfig, EmbeddingConfig, LLMConfig
 from AI_Lawyer.constants import *
 
-class ConfigurationMannager:
+class ConfigurationManager:
     def __init__(self, config_filepath=CONFIG_FILE_PATH, params_filepath=PARAMS_FILE_PATH):
         self.config = read_yaml(config_filepath)
         self.params = read_yaml(params_filepath)
@@ -37,4 +37,22 @@ class ConfigurationMannager:
         return chunking_config
         
      
-    
+    def get_embeddings_config(self) -> EmbeddingConfig:
+        config = self.config['embeddings']
+        embedding_config = EmbeddingConfig(
+            model = config['model'],
+            vector_store = config['vector_store'],
+            vector_store_path = config['vector_store_path'],
+            api_key = config['api_key']
+        )
+        return embedding_config
+
+
+    def get_llm_config(self) -> LLMConfig:
+        config = self.config['llm']
+        llm_config = LLMConfig(
+            provider = config['provider'],
+            model = config['model'],
+            api_key = config['api_key']
+        )
+        return llm_config

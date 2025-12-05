@@ -59,14 +59,14 @@ data:
     - "https://www.jhalsa.org/pdfs/Reading_Materials/SC_Judgements_FamilyMatters1.pdf"
 
 
-embedding:
-  model: "deepseek-r1:1.5b"
+embeddings:
+  model: "all-MiniLM-L6-v2"
   vector_store: "FAISS"
   vector_store_path: "models/vector_store"
-  api_key: "!secret Emedding_models_API_Key"
+  api_key: ""  # not required for local sentence-transformers
 
 llm:
   provider: "groq"
-  model: "deepseek-r1-distill-llama-70b"
+  model: "llama-3.3-70b-versatile"
   api_key: "!secret response_model_API_Key"
 

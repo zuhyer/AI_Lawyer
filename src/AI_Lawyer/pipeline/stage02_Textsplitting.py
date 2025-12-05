@@ -1,4 +1,4 @@
-from AI_Lawyer.config.configuration import ConfigurationMannager
+from AI_Lawyer.config.configuration import ConfigurationManager
 from AI_Lawyer.components.chunking_component import Data_Loader,Chunking_text
 from AI_Lawyer.utils.logging_setup import logger
 
@@ -8,7 +8,7 @@ def start_data_loader_pipeline():
     try:
         logger.info(f"===== Starting Data Loading Pipeline =====")
 
-        config_manager = ConfigurationMannager()
+        config_manager = ConfigurationManager()
         data_config = config_manager.get_data_ingestion_config()
 
         loader = Data_Loader(config=data_config)
@@ -29,7 +29,7 @@ def start_chunking_pipeline(documents):
     try:
         logger.info(f"===== Starting Text Chunking Pipeline =====")
 
-        config_manager = ConfigurationMannager()
+        config_manager = ConfigurationManager()
         chunk_config = config_manager.get_chunking_config()
 
         chunker = Chunking_text(config=chunk_config)

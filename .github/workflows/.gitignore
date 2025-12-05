@@ -1,0 +1,218 @@
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+config/secret.yaml
+config/*.secret
+*.key
+*.pem
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheelall-mpnet-base-v2s/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.project
+.pydevproject
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# IDE - VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# Pipenv
+Pipfile.lock
+
+# Poetry
+poetry.lock
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Local data/cache
+artifacts/data/pdfs/*
+!artifacts/data/pdfs/.gitkeep
+artifacts/
+*.pkl
+*.pickle
+
+# Vector Store
+models/vector_store/index.faiss
+models/vector_store/index.pkl
+vectorstore/db_faiss/index.faiss
+vectorstore/db_faiss/index.pkl
+
+# OS
+.DS_Store
+Thumbs.db
+.finder
+.AppleDouble
+.LSOverride
+
+# Temporary files
+*.tmp
+*.temp
+*~
+.~*
+
+# Node (if using for frontend)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# OS lock files
+.lock
+*.lock
+
+# Coverage
+.coverage
+htmlcov/
+
+# pytest
+.pytest_cache/
+
+# Hypothesis
+.hypothesis/
+
+# IDE specific
+.idea/
+.vscode/
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Docs
+site/
+docs/_build/
+
+# Distribution / packaging
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+
+# Translations
+*.mo
+*.pot
+
+# Sphinx
+docs/_build/
+
+# Scrapy
+.scrapy
+
+# Backup files
+*.bak
+*.backup
+
+# OS generated files
+.Spotlight-V100
+.Trashes
+ehthumbs.db
