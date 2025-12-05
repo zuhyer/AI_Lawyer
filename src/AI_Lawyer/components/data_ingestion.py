@@ -1,12 +1,8 @@
-import os
 import requests
-import yaml
-import logging
 from pathlib import Path
 
 from AI_Lawyer.entity.config_entity import DataConfig
 from AI_Lawyer.utils.logging_setup import logger
-import sys
 
 class DataIngestion:
     def __init__(self, config: DataConfig):
