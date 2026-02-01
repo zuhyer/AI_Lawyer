@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  ai-lawyer-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai-lawyer-api
+    ports:
+      - "8000:8000"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - LOG_LEVEL=info
+      - RELOAD=false
+      - ALLOWED_ORIGINS=*
+    volumes:
+      - ./artifacts:/app/artifacts
+      - ./config:/app/config
+      - ./models:/app/models
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+# Optional: Add database, vector store, or other services below
+# Example:
+# postgres:
+#   image: postgres:15
+#   environment:
+#     POSTGRES_PASSWORD: password
+#   volumes:
+#     - postgres_data:/var/lib/postgresql/data

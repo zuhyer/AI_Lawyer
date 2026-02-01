@@ -1,0 +1,49 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.env
+.env.*
+.venv/
+venv/
+env/
+
+# Secrets and local config
+config/secret.yaml
+*.key
+*.pem
+
+# IDEs and editors
+.vscode/
+.idea/
+
+# Logs and runtime files
+logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python build
+build/
+dist/
+.eggs/
+*.egg-info/
+
+# Vectorstore and indexes
+vector_store/
+vectorstore/
+*.faiss
+index.faiss
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Misc
+.pytest_cache/
+coverage.xml
