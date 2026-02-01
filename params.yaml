@@ -2,3 +2,8 @@ chunkingparams:
    chunk_size: 1000
    chunk_overlap: 200
    add_start_index: true
+
+user_upload_params:
+  chunk_size: 1000
+  chunk_overlap: 200
+  add_start_index: true

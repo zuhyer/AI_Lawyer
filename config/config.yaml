@@ -70,3 +70,22 @@ llm:
   model: "llama-3.3-70b-versatile"
   api_key: "!secret response_model_API_Key"
 
+file_extraction:
+  supported_formats:
+    - "pdf"
+    - "docx"
+    - "txt"
+    - "png"
+    - "jpg"
+    - "jpeg"
+    - "bmp"
+    - "tiff"
+  ocr_enabled: true
+  tesseract_path: "/usr/bin/tesseract"
+  ocr_language: "eng"
+  log_extraction_details: true
+  batch_processing: true
+
+user_upload_processor:
+  max_upload_size_mb: 50
+  temp_index_ttl_seconds: 3600

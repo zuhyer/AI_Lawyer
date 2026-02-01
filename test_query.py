@@ -39,7 +39,7 @@ def main():
         logger.info("✓ QueryComponent initialized")
 
         # Test query
-        test_question = "What are the basic human rights?"
+        test_question = "what are some finance related law in india?"
         logger.info(f"Executing test query: '{test_question}'")
 
         response = query_engine.execute_query(test_question)
