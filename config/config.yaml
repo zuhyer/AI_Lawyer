@@ -1,69 +1,89 @@
 data:
-   root_dir: "artifacts/"
-   pdf_directory: "artifacts/data/pdfs/"
-   source_url:
-    # 📘 Constitution of India
-    - "https://lddashboard.legislative.gov.in/sites/default/files/coi/COI_2024.pdf"
-
-    # ⚖️ Indian Penal Code (IPC)
-    - "https://www.indiacode.nic.in/repealedfileopen?rfilename=A1860-45.pdf"
-
-    # 🕵️ Criminal Laws
-    - "https://www.indiacode.nic.in/bitstream/123456789/15272/1/the_code_of_criminal_procedure,_1973.pdf"
-    - "https://www.mha.gov.in/sites/default/files/250883_english_01042024.pdf"
-    - "https://www.mha.gov.in/sites/default/files/250882_english_01042024.pdf"
-    - "https://www.mha.gov.in/sites/default/files/2024-04/250884_2_english_01042024.pdf"
-
-    # 🧾 Civil Laws
-    - "https://www.indiacode.nic.in/bitstream/123456789/11087/1/the_code_of_civil_procedure%2C_1908.pdf"
-
-    # 🧠 Indian Evidence Act
-    - "https://www.indiacode.nic.in/bitstream/123456789/15351/1/iea_1872.pdf"
-
-    # 🏠 Registration, Property, Family Laws
-    - "https://www.indiacode.nic.in/bitstream/123456789/1565/5/A1963-36.pdf"
-    - "https://www.indiacode.nic.in/bitstream/123456789/15937/1/the_registration_act%2C1908.pdf"
-    - "https://www.indiacode.nic.in/bitstream/123456789/2338/1/A1882-04.pdf"
-    - "https://www.indiacode.nic.in/bitstream/123456789/2187/2/A187209.pdf"
-    - "https://www.indiacode.nic.in/bitstream/123456789/1885/1/A194910.pdf"
-    - "https://www.indiacode.nic.in/bitstream/123456789/2189/1/a1881-26.pdf"
-
-    # 💰 Financial & Corporate Laws
-    - "https://www.indiacode.nic.in/bitstream/123456789/1988/1/A1999_42.pdf"
-    - "https://www.indiacode.nic.in/bitstream/123456789/2036/5/A2003-15.pdf"
-    - "https://www.indiacode.nic.in/bitstream/123456789/2114/5/A2013-18.pdf"
-    - "https://www.indiacode.nic.in/bitstream/123456789/1234/1/A1961-43.pdf"
-
-    # 💵 GST Laws
-    - "https://cbic-gst.gov.in/CGST_Act_2017.pdf"
-    - "https://cbic-gst.gov.in/IGST_Act_2017.pdf"
-
-    # 🗳️ Election Laws
-    - "https://www.indiacode.nic.in/bitstream/123456789/11219/1/A1950-43.pdf"
-    - "https://www.indiacode.nic.in/bitstream/123456789/11220/1/A1951-43.pdf"
-
-    # 👨‍👩‍👧 Personal Laws & Social Acts
-    - "https://www.indiacode.nic.in/bitstream/123456789/1569/1/A1988-49.pdf"
-    - "https://www.indiacode.nic.in/bitstream/123456789/1954/1/A2005-22.pdf"
-    - "https://www.indiacode.nic.in/bitstream/123456789/1560/1/A1955-25.pdf"
-    - "https://www.indiacode.nic.in/bitstream/123456789/2303/1/A1937-26.pdf"
-    - "https://www.indiacode.nic.in/bitstream/123456789/2186/1/A1872-15.pdf"
-    - "https://www.indiacode.nic.in/bitstream/123456789/23393/1/P3A1936-2.pdf"
-    - "https://www.indiacode.nic.in/bitstream/123456789/15319/1/A1954-43.pdf"
-
-    # ⚖️ Landmark Supreme Court Judgments
-    - "https://nja.gov.in/Concluded_Programmes/2019-20/SE-05_2019_PPTs/6.LANDMARK%20JUDGMENTS%20OF%20THE%20SUPREME%20COURT%20PLAIN.pdf"
-    - "https://www.narcoordindia.gov.in/narcoordindia/judgements.php"
-    - "https://misc.manupatra.in/images/Illustrated_cases_supreme_court_of_india.pdf"
-    - "https://drive.google.com/file/d/1qCW-xgaA4Nt5g3bskG95N4MKy-SGY54q/view"
-    - "https://www.jhalsa.org/pdfs/Reading_Materials/SC_Judgements_FamilyMatters1.pdf"
-
+  root_dir: "/workspaces/AI_Lawyer/artifacts"
+  pdf_directory: "/workspaces/AI_Lawyer/artifacts/data"
+  source_url: []
 
 embeddings:
   model: "all-MiniLM-L6-v2"
   vector_store: "FAISS"
   vector_store_path: "models/vector_store"
   api_key: ""  # not required for local sentence-transformers
+
+# Vector Database Configuration (Domain-Separated)
+vector_db:
+  base_path: "vector_db"
+  default_top_k: 5
+  domains:
+    - constitution
+    - bns_criminal_law
+    - bnss_procedure
+    - sakshya_evidence
+    - case_law_sc_recent
+    - procedure_guides_db
+    - legal_templates_db
+
+# Domain-Specific Chunking Configuration
+chunking:
+  constitution:
+    data_source: "/workspaces/AI_Lawyer/artifacts/data/20240716890312078.pdf"
+    chunk_size: 700
+    chunk_overlap: 80
+    strategy: "article_based"
+    description: "Constitution of India - Article-based chunking"
+  
+  bns_criminal_law:
+    data_source: "/workspaces/AI_Lawyer/artifacts/data/The Bharatiya Nyaya Sanhita, 2023.pdf"
+    chunk_size: 600
+    chunk_overlap: 50
+    strategy: "section_based"
+    description: "BNS Criminal Law - Section-based chunking"
+  
+  bnss_procedure:
+    data_source: "/workspaces/AI_Lawyer/artifacts/data/The Bharatiya Nagarik Suraksha Sanhita, 2023.pdf"
+    chunk_size: 650
+    chunk_overlap: 60
+    strategy: "section_based"
+    description: "BNSS Procedure - Section-based chunking"
+  
+  sakshya_evidence:
+    data_source: "/workspaces/AI_Lawyer/artifacts/data/The Bharatiya Sakshya Bill, 2023.pdf"
+    chunk_size: 600
+    chunk_overlap: 50
+    strategy: "section_based"
+    description: "Sakshya Evidence Act - Section-based chunking"
+  
+  case_law_sc_recent:
+    data_source: "/workspaces/AI_Lawyer/artifacts/data/Landmark Constitutional Law Judgments in 2024.pdf"
+    chunk_size: 1000
+    chunk_overlap: 120
+    strategy: "case_structure_based"
+    description: "Recent Supreme Court Case Law - Case structure-based chunking"
+  
+  procedure_guides_db:
+    data_source: "/workspaces/AI_Lawyer/artifacts/data/2024_06_21T21_29_25_criminal_rules_practise_1990.pdf"
+    chunk_size: 800
+    chunk_overlap: 100
+    strategy: "rule_based"
+    description: "Procedure Guides - Rule-based chunking"
+  
+  legal_templates_db:
+    # For the new dataset we ingest one template file at a time and DO NOT chunk.
+    # Set `preserve_full_document: true` so downstream components skip chunking.
+    data_source: "/workspaces/AI_Lawyer/artifacts/data/templates/1076-0094_Application-Dissolution-Marraige_Exp.11.30.2024_504.pdf"
+    strategy: "non_chunked"
+    preserve_full_document: true
+    description: "Legal Templates - preserve full document; ingest single file only"
+
+# Verification Configuration
+verification:
+  min_confidence_threshold: 0.65
+  enable_citation_validation: true
+  citation_types:
+    - "Section"
+    - "Article"
+    - "Rule"
+    - "Schedule"
+    - "Case Law"
 
 llm:
   provider: "groq"

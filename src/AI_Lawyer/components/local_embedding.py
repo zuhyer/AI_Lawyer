@@ -53,10 +53,27 @@ class LocalSentenceTransformerEmbeddings(Embeddings):
 
 class EmbeddingCreator:
 
-    def __init__(self, config: EmbeddingConfig):
+    def __init__(self, config: EmbeddingConfig, domain: str = None, vector_store_path=None):
+        """
+        Initialize EmbeddingCreator.
+        
+        Args:
+            config: EmbeddingConfig instance
+            domain: Optional domain name for logging
+            vector_store_path: Optional Path to override default vector store location
+        """
         self.config = config
+        self.domain = domain
         self.model_name = config.model or "all-MiniLM-L6-v2"
-        self.db_path = Path(config.vector_store_path)
+        
+        # Use provided path or fall back to config
+        if vector_store_path:
+            self.db_path = Path(vector_store_path) if not isinstance(vector_store_path, Path) else vector_store_path
+        else:
+            self.db_path = Path(config.vector_store_path)
+        
+        if domain:
+            logger.info(f"EmbeddingCreator initialized for domain: {domain}")
 
     def get_embedding_model(self):
         """Return a local sentence-transformers based embeddings instance."""
@@ -69,7 +86,8 @@ class EmbeddingCreator:
 
     def create_vector_store(self, text_chunks):
         try:
-            logger.info("Creating FAISS vector store using local embeddings...")
+            domain_info = f" for domain '{self.domain}'" if self.domain else ""
+            logger.info(f"Creating FAISS vector store{domain_info} using local embeddings...")
             embedding_model = self.get_embedding_model()
 
             faiss_db = FAISS.from_documents(
@@ -82,7 +100,7 @@ class EmbeddingCreator:
 
             faiss_db.save_local(str(self.db_path))
 
-            logger.info(f"FAISS database saved successfully at: {self.db_path}")
+            logger.info(f"✅ FAISS database saved successfully at: {self.db_path}")
             return faiss_db
 
         except Exception as e:

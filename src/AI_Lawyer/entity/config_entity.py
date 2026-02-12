@@ -1,12 +1,13 @@
 from pathlib import Path
 from dataclasses import dataclass
-from typing import List
+from typing import List, Dict, Optional, Any
 
 @dataclass(frozen=True)
 class DataConfig:
     root_dir: Path
     source_url: List[str]
     pdf_directory: Path
+
 
 
 @dataclass(frozen=True)
@@ -32,6 +33,21 @@ class ChunkingConfig:
 
 
 @dataclass(frozen=True)
+class DomainChunkingConfig:
+    """Domain-specific chunking configuration."""
+    domain: str
+    chunk_size: int
+    chunk_overlap: int
+    strategy: str
+    description: str
+    # Optional path to the original data source for this domain
+    data_source: Optional[str] = None
+    # If True, the domain's documents should be preserved as full documents
+    # and not passed through the chunking pipeline (e.g., legal templates)
+    preserve_full_document: bool = False
+
+
+@dataclass(frozen=True)
 class FileExtractorConfig:
     supported_formats: List[str]
     ocr_enabled: bool
@@ -51,11 +67,40 @@ class UserUploadProcessorConfig:
     temp_index_ttl_seconds: int
 
 
+@dataclass(frozen=True)
+class VectorDBConfig:
+    """Vector database configuration for domain-separated indices."""
+    base_path: str
+    default_top_k: int
+    domains: List[str]
+
+
+@dataclass(frozen=True)
+class VerificationConfig:
+    """Verification pipeline configuration."""
+    min_confidence_threshold: float
+    enable_citation_validation: bool
+    citation_types: List[str]
+
+
+@dataclass(frozen=True)
+class FinalResponse:
+    """Final structured response with domain, citations, and confidence."""
+    answer: str
+    domain_used: str
+    citations: List[str]
+    verified: bool
+    confidence_score: float
+    metadata: Optional[Dict[str, Any]] = None
+
+
 @dataclass
 class config:
     data: DataConfig
     embeddings: EmbeddingConfig
     LLM: LLMConfig
     chunks: ChunkingConfig
+    vector_db: VectorDBConfig
+    verification: VerificationConfig
 
 

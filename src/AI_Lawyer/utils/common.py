@@ -2,6 +2,7 @@ import os
 import joblib
 import yaml
 import json 
+import hashlib
 from box.exceptions import BoxValueError
 from typing import Any
 from AI_Lawyer.utils.logging_setup import logger 
@@ -137,4 +138,88 @@ def decodeImage(imgstring, fileName):
 
 def encodeImageIntoBase64(croppedImagePath):
     with open(croppedImagePath, "rb") as f:
-        return base64.b64encode(f.read()) 
+        return base64.b64encode(f.read())
+
+
+@ensure_annotations
+def compute_document_hash(text: str, file_path: str = None) -> str:
+    """
+    Compute hash of document content for deduplication.
+    
+    Args:
+        text: Document text content
+        file_path: Optional file path to include in hash
+        
+    Returns:
+        Hexadecimal hash string
+    """
+    hash_input = text
+    if file_path:
+        hash_input = f"{file_path}|{text}"
+    
+    return hashlib.sha256(hash_input.encode()).hexdigest()
+
+
+@ensure_annotations
+def deduplicate_documents(documents: list) -> list:
+    """
+    Deduplicate documents based on content hash.
+    Preserves order and keeps first occurrence.
+    
+    Args:
+        documents: List of LangChain Document objects
+        
+    Returns:
+        List of deduplicated documents
+    """
+    if not documents:
+        return documents
+    
+    seen_hashes = set()
+    unique_docs = []
+    
+    for doc in documents:
+        # Extract text content
+        text = doc.page_content if hasattr(doc, 'page_content') else str(doc)
+        
+        # Compute hash
+        doc_hash = compute_document_hash(text)
+        
+        # Only add if not seen before
+        if doc_hash not in seen_hashes:
+            unique_docs.append(doc)
+            seen_hashes.add(doc_hash)
+        else:
+            logger.debug(f"Duplicate document skipped (hash: {doc_hash[:8]}...)")
+    
+    if len(unique_docs) < len(documents):
+        logger.info(f"Deduplicated: {len(documents)} → {len(unique_docs)} documents")
+    
+    return unique_docs
+
+
+@ensure_annotations
+def add_document_metadata(documents: list, domain: str, source_file: str = None) -> list:
+    """
+    Add or update metadata for documents (domain, source, etc.).
+    Useful for template ingestion to preserve provenance.
+    
+    Args:
+        documents: List of LangChain Document objects
+        domain: Domain name (e.g., 'legal_templates_db')
+        source_file: Optional source file path
+        
+    Returns:
+        List of documents with updated metadata
+    """
+    for doc in documents:
+        if not hasattr(doc, 'metadata'):
+            doc.metadata = {}
+        
+        doc.metadata['domain'] = domain
+        if source_file:
+            doc.metadata['source_file'] = source_file
+        doc.metadata['ingestion_type'] = 'full_document' if doc.metadata.get('preserve_full') else 'chunked'
+    
+    logger.info(f"Added metadata to {len(documents)} documents (domain={domain})")
+    return documents 
