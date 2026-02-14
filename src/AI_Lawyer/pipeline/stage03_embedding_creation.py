@@ -2,45 +2,32 @@ from AI_Lawyer.config.configuration import ConfigurationManager
 from AI_Lawyer.components.local_embedding import EmbeddingCreator
 from AI_Lawyer.utils.logging_setup import logger
 from langchain_community.vectorstores import FAISS
-from pathlib import Path
 
 
 STAGE_NAME = "Embedding Stage"
 
 
-def start_embedding_pipeline(text_chunks, domain: str = "constitution"):
+def start_embedding_pipeline(text_chunks):
     """
     Runs the embedding creation process:
       - Loads embedding config
-      - Uses domain-specific vector store path
       - Creates FAISS vector store
-      - Saves it to domain-specific location
-      
-    Args:
-        text_chunks: List of document chunks to embed
-        domain: Domain name for domain-specific vector store path
+      - Saves it to disk
     """
     try:
-        logger.info(f"===== Starting Embedding Pipeline for domain: {domain} =====")
+        logger.info("===== Starting Embedding Pipeline =====")
 
         # Load embedding config from configuration manager
         config_manager = ConfigurationManager()
         embedding_config = config_manager.get_embeddings_config()
-        
-        # Get domain-specific vector DB path
-        domain_vector_db_path = config_manager.get_domain_vector_db_path(domain)
 
-        # Initialize embedding component with domain-specific path
-        embedding_creator = EmbeddingCreator(
-            config=embedding_config,
-            domain=domain,
-            vector_store_path=domain_vector_db_path
-        )
+        # Initialize embedding component
+        embedding_creator = EmbeddingCreator(config=embedding_config)
 
         # Create the FAISS vector store
         faiss_db = embedding_creator.main(text_chunks)
 
-        logger.info(f"✅ Embedding Pipeline completed for domain '{domain}'")
+        logger.info("Embedding Pipeline completed successfully.")
         return faiss_db
 
     except Exception as e:
@@ -49,38 +36,31 @@ def start_embedding_pipeline(text_chunks, domain: str = "constitution"):
 
 
 
-def load_existing_vector_store(domain: str = "constitution"):
+def load_existing_vector_store():
     """
-    Load FAISS DB from disk for a specific domain.
-    
-    Args:
-        domain: Domain name to load vector store for
+    Optional method:
+    Load FAISS DB from disk when needed.
     """
     try:
-        logger.info(f"===== Loading Existing FAISS Database for domain: {domain} =====")
+        logger.info("===== Loading Existing FAISS Database =====")
 
         config_manager = ConfigurationManager()
         embedding_config = config_manager.get_embeddings_config()
-        domain_vector_db_path = config_manager.get_domain_vector_db_path(domain)
 
-        embedding_creator = EmbeddingCreator(
-            config=embedding_config,
-            domain=domain,
-            vector_store_path=domain_vector_db_path
-        )
+        embedding_creator = EmbeddingCreator(config=embedding_config)
 
-        # Load from domain-specific path
+        # Load from path
         db = FAISS.load_local(
-            str(domain_vector_db_path),
+            embedding_creator.db_path,
             embedding_creator.get_embedding_model(),
             allow_dangerous_deserialization=True
         )
 
-        logger.info(f"✅ FAISS Database loaded for domain '{domain}' from: {domain_vector_db_path}")
+        logger.info("Existing FAISS Database loaded successfully.")
         return db
 
     except Exception as e:
-        logger.exception(f"Failed to load FAISS database for domain '{domain}': {e}")
+        logger.exception(f"Failed to load FAISS database: {e}")
         raise e
 
 

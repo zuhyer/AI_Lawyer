@@ -8,10 +8,7 @@ from AI_Lawyer.entity.config_entity import (
     EmbeddingConfig, 
     LLMConfig, 
     FileExtractorConfig,
-    UserUploadProcessorConfig,
-    DomainChunkingConfig,
-    VectorDBConfig,
-    VerificationConfig
+    UserUploadProcessorConfig
 )
 from AI_Lawyer.constants import *
 
@@ -168,6 +165,28 @@ class ConfigurationManager:
         domain_path = Path(vdb_config.base_path) / domain
         domain_path.mkdir(parents=True, exist_ok=True)
         return domain_path
+        
+    def get_embeddings_config(self) -> EmbeddingConfig:
+        """Get embeddings configuration."""
+        config = self.config['embeddings']
+        embedding_config = EmbeddingConfig(
+            model=config['model'],
+            vector_store=config['vector_store'],
+            vector_store_path=config['vector_store_path'],
+            api_key=config['api_key']
+        )
+        return embedding_config
+
+    def get_chunking_config(self) -> ChunkingConfig:
+        """Get text chunking configuration."""
+        config = self.params['chunkingparams']
+
+        chunking_config = ChunkingConfig(
+            chunk_size=config['chunk_size'],
+            chunk_overlap=config['chunk_overlap'],
+            add_start_index=config['add_start_index']
+        )
+        return chunking_config
         
     def get_embeddings_config(self) -> EmbeddingConfig:
         """Get embeddings configuration."""

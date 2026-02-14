@@ -1,5 +1,5 @@
 from AI_Lawyer.config.configuration import ConfigurationManager
-from AI_Lawyer.components.chunking_component import Data_Loader, Chunking_text
+from AI_Lawyer.components.chunking_component import Data_Loader,Chunking_text
 from AI_Lawyer.utils.logging_setup import logger
 from AI_Lawyer.utils.common import deduplicate_documents, add_document_metadata
 
@@ -27,7 +27,12 @@ def start_data_loader_pipeline(domain: str = "constitution"):
         raise e
     
 
-    
+def start_chunking_pipeline(documents):
+    try:
+        logger.info(f"===== Starting Text Chunking Pipeline =====")
+
+        config_manager = ConfigurationManager()
+        chunk_config = config_manager.get_chunking_config()
 
 def start_chunking_pipeline(documents, domain: str = "constitution"):
     try:

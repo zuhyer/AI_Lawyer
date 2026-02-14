@@ -6,10 +6,9 @@ error handling, security, and observability.
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.middleware.gzip import GZIPMiddleware
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from fastapi.exceptions import RequestValidationError
-from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 import time
@@ -18,7 +17,7 @@ import os
 import uuid
 from datetime import datetime
 
-from AI_Lawyer.api.routes import health, extraction, query, ingestion, domain_query
+from AI_Lawyer.api.routes import health, extraction, query, ingestion
 from AI_Lawyer.api.exceptions import APIException, ErrorCode
 from AI_Lawyer.api.dependencies import lifespan_manager
 from AI_Lawyer.utils.logging_setup import logger
@@ -26,48 +25,56 @@ from AI_Lawyer.utils.logging_setup import logger
 
 # ===== MIDDLEWARE & REQUEST CONTEXT =====
 
-class RequestIDMiddleware(BaseHTTPMiddleware):
+class RequestIDMiddleware:
     """Middleware to add request IDs for tracking."""
-
-    async def dispatch(self, request: Request, call_next):
+    
+    def __init__(self, app):
+        """Initialize middleware."""
+        self.app = app
+    
+    async def __call__(self, request: Request, call_next):
         """Process request with ID."""
         request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
         request.state.request_id = request_id
         request.state.start_time = time.time()
-
+        
         response = await call_next(request)
-
+        
         response.headers["X-Request-ID"] = request_id
-
+        
         return response
 
 
-class LoggingMiddleware(BaseHTTPMiddleware):
+class LoggingMiddleware:
     """Middleware for request/response logging."""
-
-    async def dispatch(self, request: Request, call_next):
+    
+    def __init__(self, app):
+        """Initialize middleware."""
+        self.app = app
+    
+    async def __call__(self, request: Request, call_next):
         """Log request and response."""
         start_time = time.time()
         request_id = getattr(request.state, "request_id", "unknown")
-
+        
         # Log request
         logger.info(
             f"[{request_id}] {request.method} {request.url.path} "
             f"client={request.client.host if request.client else 'unknown'}"
         )
-
+        
         try:
             response = await call_next(request)
             process_time = time.time() - start_time
-
+            
             # Log response
             logger.info(
                 f"[{request_id}] {request.method} {request.url.path} "
                 f"status={response.status_code} time={process_time:.3f}s"
             )
-
+            
             response.headers["X-Process-Time"] = str(process_time)
-
+            
             return response
         except Exception as e:
             process_time = time.time() - start_time
@@ -141,8 +148,8 @@ def create_app():
             allowed_hosts=trusted_hosts
         )
     
-    # GZip compression
-    app.add_middleware(GZipMiddleware, minimum_size=1000)
+    # GZIP compression
+    app.add_middleware(GZIPMiddleware, minimum_size=1000)
     
     # HTTPS redirect (disable in development)
     if os.getenv("REQUIRE_HTTPS", "false").lower() == "true":
@@ -226,9 +233,6 @@ def create_app():
     
     # Query/RAG routes
     app.include_router(query.router)
-    
-    # Domain-aware query routes (new)
-    app.include_router(domain_query.router)
     
     # ===== ROOT ENDPOINTS =====
     

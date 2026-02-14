@@ -74,16 +74,11 @@ chunking:
     preserve_full_document: true
     description: "Legal Templates - preserve full document; ingest single file only"
 
-# Verification Configuration
-verification:
-  min_confidence_threshold: 0.65
-  enable_citation_validation: true
-  citation_types:
-    - "Section"
-    - "Article"
-    - "Rule"
-    - "Schedule"
-    - "Case Law"
+embeddings:
+  model: "all-MiniLM-L6-v2"
+  vector_store: "FAISS"
+  vector_store_path: "models/vector_store"
+  api_key: ""  # not required for local sentence-transformers
 
 llm:
   provider: "groq"
