@@ -49,10 +49,10 @@ The project implements **MLOps** principles like version control, experiment tra
 ---
 ## 🚧 Current Updates in Progress
 
-- Improving the agent's reasoning capability
-- Adding citation links to answers
-- Introducing case law summarization
-- Adding support for multi-language queries
+- **Improving the agent's reasoning capability**
+- **Adding citation links to answers**
+- **Introducing case law summarization**
+- **Adding support for multi-language queries**
 - **Automated Document Drafting & Review**
 - **Deep Legal Research & Case Retrieval**
 - **Nuanced Contract Comparison & Analysis**

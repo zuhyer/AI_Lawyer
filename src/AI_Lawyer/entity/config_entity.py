@@ -1,6 +1,6 @@
 from pathlib import Path
 from dataclasses import dataclass
-from typing import List
+from typing import List, Dict, Optional, Any
 
 @dataclass(frozen=True)
 class DataConfig:
