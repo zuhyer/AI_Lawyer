@@ -8,7 +8,10 @@ from AI_Lawyer.entity.config_entity import (
     EmbeddingConfig, 
     LLMConfig, 
     FileExtractorConfig,
-    UserUploadProcessorConfig
+    UserUploadProcessorConfig,
+    DomainChunkingConfig,
+    VectorDBConfig,
+    VerificationConfig
 )
 from AI_Lawyer.constants import *
 
@@ -71,7 +74,8 @@ class ConfigurationManager:
                 strategy=domain_config.get('strategy', 'default'),
                 description=domain_config.get('description', f'Configuration for {domain}'),
                 data_source=domain_config.get('data_source'),
-                preserve_full_document=domain_config.get('preserve_full_document', False)
+                preserve_full_document=domain_config.get('preserve_full_document', False),
+                add_start_index=domain_config.get('add_start_index', True)
             )
             
             logger.info(f"✅ Domain '{domain}' config loaded: "
@@ -165,7 +169,7 @@ class ConfigurationManager:
         domain_path = Path(vdb_config.base_path) / domain
         domain_path.mkdir(parents=True, exist_ok=True)
         return domain_path
-        
+
     def get_embeddings_config(self) -> EmbeddingConfig:
         """Get embeddings configuration."""
         config = self.config['embeddings']
@@ -187,17 +191,6 @@ class ConfigurationManager:
             add_start_index=config['add_start_index']
         )
         return chunking_config
-        
-    def get_embeddings_config(self) -> EmbeddingConfig:
-        """Get embeddings configuration."""
-        config = self.config['embeddings']
-        embedding_config = EmbeddingConfig(
-            model=config['model'],
-            vector_store=config['vector_store'],
-            vector_store_path=config['vector_store_path'],
-            api_key=config['api_key']
-        )
-        return embedding_config
 
     def get_llm_config(self) -> LLMConfig:
         """Get LLM configuration."""

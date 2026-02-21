@@ -51,11 +51,39 @@ class UserUploadProcessorConfig:
     temp_index_ttl_seconds: int
 
 
+@dataclass(frozen=True)
+class DomainChunkingConfig:
+    """Domain-specific chunking configuration."""
+    domain: str
+    chunk_size: int
+    chunk_overlap: int
+    strategy: str
+    description: str
+    data_source: Optional[str] = None
+    preserve_full_document: bool = False
+    add_start_index: bool = True
+
+
+@dataclass(frozen=True)
+class VectorDBConfig:
+    """Vector database configuration with domain support."""
+    base_path: str
+    default_top_k: int
+    domains: List[str]
+
+
+@dataclass(frozen=True)
+class VerificationConfig:
+    """Verification pipeline configuration."""
+    min_confidence_threshold: float
+    enable_citation_validation: bool
+    citation_types: List[str]
+
+
 @dataclass
 class config:
     data: DataConfig
     embeddings: EmbeddingConfig
     LLM: LLMConfig
     chunks: ChunkingConfig
-
 

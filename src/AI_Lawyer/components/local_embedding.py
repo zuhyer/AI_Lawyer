@@ -53,10 +53,17 @@ class LocalSentenceTransformerEmbeddings(Embeddings):
 
 class EmbeddingCreator:
 
-    def __init__(self, config: EmbeddingConfig):
+    def __init__(self, config: EmbeddingConfig, domain: str = None, config_manager = None):
         self.config = config
         self.model_name = config.model or "all-MiniLM-L6-v2"
-        self.db_path = Path(config.vector_store_path)
+        self.domain = domain
+        self.config_manager = config_manager
+        
+        # Set path based on domain or use default
+        if domain and config_manager:
+            self.db_path = config_manager.get_domain_vector_db_path(domain)
+        else:
+            self.db_path = Path(config.vector_store_path)
 
     def get_embedding_model(self):
         """Return a local sentence-transformers based embeddings instance."""

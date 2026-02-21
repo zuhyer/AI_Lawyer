@@ -6,7 +6,7 @@ Ensures answer credibility through citation validation and text overlap analysis
 import re
 from typing import List, Tuple, Dict, Optional
 from dataclasses import dataclass
-from langchain.schema import Document
+from langchain_core.documents import Document
 
 from AI_Lawyer.config.configuration import ConfigurationManager
 from AI_Lawyer.utils.logging_setup import logger

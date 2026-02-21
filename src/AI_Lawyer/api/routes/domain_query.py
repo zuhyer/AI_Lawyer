@@ -128,7 +128,7 @@ async def ask_domain_aware_query(request: QueryRequest):
         
         # Step 3: Retrieve documents using domain-specific index
         retrieval_start = time.time()
-        docs = query_component.retrieve_docs(request.query, k=request.top_k)
+        docs = query_component.retrieve_docs(request.query, top_k=request.top_k)
         retrieval_time = time.time() - retrieval_start
         
         if not docs:

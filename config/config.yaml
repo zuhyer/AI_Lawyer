@@ -1,18 +1,52 @@
 data:
+  # Root directory for all artifacts and data
   root_dir: "/workspaces/AI_Lawyer/artifacts"
+  
+  # Directory containing local PDF, DOCX, and TXT files
+  # This directory is scanned when source_url is empty (LOCAL DATA MODE)
   pdf_directory: "/workspaces/AI_Lawyer/artifacts/data"
+  
+  # source_url: URLs for dynamic data ingestion (LEGACY MODE)
+  # - If source_url contains URLs: downloads files from URLs
+  # - If source_url is empty ([]): scans local pdf_directory for files
+  # Supported local file formats: pdf, docx, txt
   source_url: []
 
 embeddings:
   model: "all-MiniLM-L6-v2"
   vector_store: "FAISS"
-  vector_store_path: "models/vector_store"
+  vector_store_path: "vector_db"
   api_key: ""  # not required for local sentence-transformers
+
+llm:
+  provider: "groq"
+  model: "llama-3.3-70b-versatile"
+  api_key: "!secret response_model_API_Key"
+
+file_extraction:
+  supported_formats:
+    - "pdf"
+    - "docx"
+    - "txt"
+    - "png"
+    - "jpg"
+    - "jpeg"
+    - "bmp"
+    - "tiff"
+  ocr_enabled: true
+  tesseract_path: "/usr/bin/tesseract"
+  ocr_language: "eng"
+  log_extraction_details: true
+  batch_processing: true
+
+user_upload_processor:
+  max_upload_size_mb: 50
+  temp_index_ttl_seconds: 3600
 
 # Vector Database Configuration (Domain-Separated)
 vector_db:
   base_path: "vector_db"
-  default_top_k: 5
+  default_top_k: 8
   domains:
     - constitution
     - bns_criminal_law
@@ -21,6 +55,17 @@ vector_db:
     - case_law_sc_recent
     - procedure_guides_db
     - legal_templates_db
+
+# Verification Pipeline Configuration
+verification:
+  min_confidence_threshold: 0.65
+  enable_citation_validation: true
+  citation_types:
+    - Section
+    - Article
+    - Rule
+    - Schedule
+    - Case Law
 
 # Domain-Specific Chunking Configuration
 chunking:
@@ -53,7 +98,7 @@ chunking:
     description: "Sakshya Evidence Act - Section-based chunking"
   
   case_law_sc_recent:
-    data_source: "/workspaces/AI_Lawyer/artifacts/data/Landmark Constitutional Law Judgments in 2024.pdf"
+    data_source: "/workspaces/AI_Lawyer/artifacts/data/6.LANDMARK JUDGMENTS OF THE SUPREME COURT PLAIN.pdf"
     chunk_size: 1000
     chunk_overlap: 120
     strategy: "case_structure_based"
@@ -70,37 +115,8 @@ chunking:
     # For the new dataset we ingest one template file at a time and DO NOT chunk.
     # Set `preserve_full_document: true` so downstream components skip chunking.
     data_source: "/workspaces/AI_Lawyer/artifacts/data/templates/1076-0094_Application-Dissolution-Marraige_Exp.11.30.2024_504.pdf"
+    chunk_size: 1000
+    chunk_overlap: 0
     strategy: "non_chunked"
     preserve_full_document: true
     description: "Legal Templates - preserve full document; ingest single file only"
-
-embeddings:
-  model: "all-MiniLM-L6-v2"
-  vector_store: "FAISS"
-  vector_store_path: "models/vector_store"
-  api_key: ""  # not required for local sentence-transformers
-
-llm:
-  provider: "groq"
-  model: "llama-3.3-70b-versatile"
-  api_key: "!secret response_model_API_Key"
-
-file_extraction:
-  supported_formats:
-    - "pdf"
-    - "docx"
-    - "txt"
-    - "png"
-    - "jpg"
-    - "jpeg"
-    - "bmp"
-    - "tiff"
-  ocr_enabled: true
-  tesseract_path: "/usr/bin/tesseract"
-  ocr_language: "eng"
-  log_extraction_details: true
-  batch_processing: true
-
-user_upload_processor:
-  max_upload_size_mb: 50
-  temp_index_ttl_seconds: 3600

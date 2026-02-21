@@ -1,79 +1,112 @@
-from AI_Lawyer.config.configuration import ConfigurationManager
-from AI_Lawyer.components.local_embedding import EmbeddingCreator
+from pathlib import Path
+from AI_Lawyer.entity.config_entity import EmbeddingConfig
 from AI_Lawyer.utils.logging_setup import logger
 from langchain_community.vectorstores import FAISS
+from langchain.embeddings.base import Embeddings
+
+# Local Sentence-Transformer based embeddings (all-MiniLM-L6-v2)
+try:
+    from sentence_transformers import SentenceTransformer
+    import numpy as np
+except Exception:
+    SentenceTransformer = None
 
 
-STAGE_NAME = "Embedding Stage"
-
-
-def start_embedding_pipeline(text_chunks):
+class LocalSentenceTransformerEmbeddings(Embeddings):
     """
-    Runs the embedding creation process:
-      - Loads embedding config
-      - Creates FAISS vector store
-      - Saves it to disk
+    Embeddings wrapper using sentence-transformers for local inference.
+    Implements LangChain's Embeddings interface.
     """
-    try:
-        logger.info("===== Starting Embedding Pipeline =====")
 
-        # Load embedding config from configuration manager
-        config_manager = ConfigurationManager()
-        embedding_config = config_manager.get_embeddings_config()
+    def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
+        if SentenceTransformer is None:
+            raise ImportError(
+                "sentence-transformers is not installed. Install it with `pip install sentence-transformers`"
+            )
 
-        # Initialize embedding component
-        embedding_creator = EmbeddingCreator(config=embedding_config)
+        self.model_name = model_name
+        logger.info(f"Initializing local SentenceTransformer model: {model_name}")
+        self.model = SentenceTransformer(model_name)
 
-        # Create the FAISS vector store
-        faiss_db = embedding_creator.main(text_chunks)
+    def embed_documents(self, texts):
+        try:
+            embeddings = self.model.encode(texts, convert_to_numpy=True)
 
-        logger.info("Embedding Pipeline completed successfully.")
-        return faiss_db
+            # Ensure 2D
+            if embeddings.ndim == 1:
+                embeddings = np.expand_dims(embeddings, 0)
 
-    except Exception as e:
-        logger.exception(f"Embedding Pipeline failed due to: {e}")
-        raise e
+            return [emb.tolist() for emb in embeddings]
 
+        except Exception as e:
+            logger.error(f"Error in embed_documents: {e}")
+            raise
 
+    def embed_query(self, text):
+        try:
+            emb = self.model.encode(text, convert_to_numpy=True)
+            return emb.tolist()
 
-def load_existing_vector_store():
-    """
-    Optional method:
-    Load FAISS DB from disk when needed.
-    """
-    try:
-        logger.info("===== Loading Existing FAISS Database =====")
-
-        config_manager = ConfigurationManager()
-        embedding_config = config_manager.get_embeddings_config()
-
-        embedding_creator = EmbeddingCreator(config=embedding_config)
-
-        # Load from path
-        db = FAISS.load_local(
-            embedding_creator.db_path,
-            embedding_creator.get_embedding_model(),
-            allow_dangerous_deserialization=True
-        )
-
-        logger.info("Existing FAISS Database loaded successfully.")
-        return db
-
-    except Exception as e:
-        logger.exception(f"Failed to load FAISS database: {e}")
-        raise e
+        except Exception as e:
+            logger.error(f"Error in embed_query: {e}")
+            raise
 
 
+class EmbeddingCreator:
 
-if __name__ == "__main__":
-    try:
-        logger.info(f">>>> Stage {STAGE_NAME} started <<<<")
+    def __init__(self, config: EmbeddingConfig, domain: str = None, config_manager=None):
+        self.config = config
+        self.model_name = config.model or "all-MiniLM-L6-v2"
+        self.domain = domain
+        self.config_manager = config_manager
 
-        logger.warning("This file cannot run directly. It requires text_chunks input.")
-        logger.warning("Run via main.py after data loader + text chunking pipeline.")
+        # 🔥 FIXED DOMAIN PATH LOGIC (bulletproof)
+        base_path = Path(config.vector_store_path)
 
-        logger.info(f">>>> Stage {STAGE_NAME} completed <<<<")
+        if domain and config_manager:
+            # Preferred method (if config manager provides custom domain path)
+            self.db_path = config_manager.get_domain_vector_db_path(domain)
+        elif domain:
+            # Fallback method (still keeps domain separated)
+            self.db_path = base_path / domain
+        else:
+            # No domain case (single DB)
+            self.db_path = base_path
 
-    except Exception as e:
-        logger.exception(e)
+        logger.info(f"Vector DB path set to: {self.db_path}")
 
+    def get_embedding_model(self):
+        """Return a local sentence-transformers based embeddings instance."""
+        try:
+            logger.info(f"Initializing embedding model: {self.model_name}")
+            return LocalSentenceTransformerEmbeddings(self.model_name)
+
+        except Exception as e:
+            logger.error(f"Failed to initialize embedding model: {e}")
+            raise
+
+    def create_vector_store(self, text_chunks):
+        try:
+            logger.info(f"Creating FAISS vector store for domain: {self.domain}")
+            embedding_model = self.get_embedding_model()
+
+            faiss_db = FAISS.from_documents(
+                text_chunks,
+                embedding_model
+            )
+
+            # Ensure directory exists
+            self.db_path.mkdir(parents=True, exist_ok=True)
+
+            faiss_db.save_local(str(self.db_path))
+
+            logger.info(f"FAISS database saved successfully at: {self.db_path}")
+
+            return faiss_db
+
+        except Exception as e:
+            logger.error(f"Error during FAISS vector store creation: {e}")
+            raise
+
+    def main(self, text_chunks):
+        return self.create_vector_store(text_chunks)

@@ -6,11 +6,10 @@ error handling, security, and observability.
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.middleware.gzip import GZIPMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
 import time
 import logging
 import os
@@ -19,40 +18,54 @@ from datetime import datetime
 
 from AI_Lawyer.api.routes import health, extraction, query, ingestion
 from AI_Lawyer.api.exceptions import APIException, ErrorCode
-from AI_Lawyer.api.dependencies import lifespan_manager
 from AI_Lawyer.utils.logging_setup import logger
 
 
 # ===== MIDDLEWARE & REQUEST CONTEXT =====
 
-class RequestIDMiddleware:
-    """Middleware to add request IDs for tracking."""
+
+def create_app():
+    """
+    Create and configure production-grade FastAPI application.
     
-    def __init__(self, app):
-        """Initialize middleware."""
-        self.app = app
+    Features:
+    - CORS protection
+    - Request/response logging
+    - Error handling
+    - Security headers
+    - Gzip compression
+    - Request ID tracking
+    - Health checks
+    - Comprehensive API documentation
+    """
     
-    async def __call__(self, request: Request, call_next):
-        """Process request with ID."""
+    app = FastAPI(
+        title="AI Lawyer API",
+        description="Production-grade legal document analysis and Q&A system",
+        version="1.0.0",
+        docs_url="/docs",
+        redoc_url="/redoc",
+        openapi_url="/openapi.json",
+    )
+    
+    # ===== MIDDLEWARE STACK =====
+    
+    # Request ID middleware (using decorator pattern)
+    @app.middleware("http")
+    async def request_id_middleware(request: Request, call_next):
+        """Add request IDs for tracking."""
         request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
         request.state.request_id = request_id
         request.state.start_time = time.time()
         
         response = await call_next(request)
-        
         response.headers["X-Request-ID"] = request_id
         
         return response
-
-
-class LoggingMiddleware:
-    """Middleware for request/response logging."""
     
-    def __init__(self, app):
-        """Initialize middleware."""
-        self.app = app
-    
-    async def __call__(self, request: Request, call_next):
+    # Logging middleware (using decorator pattern)
+    @app.middleware("http")
+    async def logging_middleware(request: Request, call_next):
         """Log request and response."""
         start_time = time.time()
         request_id = getattr(request.state, "request_id", "unknown")
@@ -84,40 +97,6 @@ class LoggingMiddleware:
                 exc_info=True
             )
             raise
-
-
-def create_app():
-    """
-    Create and configure production-grade FastAPI application.
-    
-    Features:
-    - CORS protection
-    - Request/response logging
-    - Error handling
-    - Security headers
-    - Gzip compression
-    - Request ID tracking
-    - Health checks
-    - Comprehensive API documentation
-    """
-    
-    app = FastAPI(
-        title="AI Lawyer API",
-        description="Production-grade legal document analysis and Q&A system",
-        version="1.0.0",
-        docs_url="/docs",
-        redoc_url="/redoc",
-        openapi_url="/openapi.json",
-        lifespan=lifespan_manager,
-    )
-    
-    # ===== MIDDLEWARE STACK =====
-    
-    # Request ID middleware (must be first)
-    app.add_middleware(RequestIDMiddleware)
-    
-    # Logging middleware
-    app.add_middleware(LoggingMiddleware)
     
     # CORS configuration
     allowed_origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
@@ -149,7 +128,7 @@ def create_app():
         )
     
     # GZIP compression
-    app.add_middleware(GZIPMiddleware, minimum_size=1000)
+    app.add_middleware(GZipMiddleware, minimum_size=1000)
     
     # HTTPS redirect (disable in development)
     if os.getenv("REQUIRE_HTTPS", "false").lower() == "true":
@@ -259,16 +238,17 @@ def create_app():
     
     # ===== STATIC FILES (Optional) =====
     
-    templates_dir = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-        "templates"
-    )
-    if os.path.exists(templates_dir):
-        try:
-            app.mount("/static", StaticFiles(directory=templates_dir), name="static")
-            logger.info(f"✓ Static files mounted from: {templates_dir}")
-        except Exception as e:
-            logger.warning(f"Could not mount static files: {e}")
+    # Commenting out static files to prevent route conflicts
+    # templates_dir = os.path.join(
+    #     os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+    #     "templates"
+    # )
+    # if os.path.exists(templates_dir):
+    #     try:
+    #         app.mount("/static", StaticFiles(directory=templates_dir), name="static")
+    #         logger.info(f"✓ Static files mounted from: {templates_dir}")
+    #     except Exception as e:
+    #         logger.warning(f"Could not mount static files: {e}")
     
     return app
 

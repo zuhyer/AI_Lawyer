@@ -237,17 +237,13 @@ async def lifespan_manager(app):
         service_manager.initialize_config()
         logger.info("✓ Configuration loaded")
         
-        # Health check
-        health = await service_manager.health_check()
-        logger.info(f"✓ Health status: {health}")
-        
         logger.info("=" * 60)
         logger.info("✅ API Ready for requests")
         logger.info("=" * 60)
         
     except Exception as e:
         logger.error(f"❌ Startup failed: {e}")
-        raise
+        # Don't raise - allow app to start anyway
     
     yield
     
@@ -255,7 +251,10 @@ async def lifespan_manager(app):
     logger.info("🛑 AI Lawyer API - Shutting down...")
     logger.info("=" * 60)
     
-    await service_manager.shutdown()
+    try:
+        await service_manager.shutdown()
+    except Exception as e:
+        logger.error(f"Shutdown error: {e}")
     
     logger.info("=" * 60)
     logger.info("✅ Shutdown complete")

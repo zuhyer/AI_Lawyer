@@ -25,14 +25,7 @@ def start_data_loader_pipeline(domain: str = "constitution"):
     except Exception as e:
         logger.exception(f"Data Loading Pipeline failed due to: {e}")
         raise e
-    
 
-def start_chunking_pipeline(documents):
-    try:
-        logger.info(f"===== Starting Text Chunking Pipeline =====")
-
-        config_manager = ConfigurationManager()
-        chunk_config = config_manager.get_chunking_config()
 
 def start_chunking_pipeline(documents, domain: str = "constitution"):
     try:
@@ -56,7 +49,13 @@ def start_chunking_pipeline(documents, domain: str = "constitution"):
             # Return documents as-is (each document = one chunk)
             return documents
 
-        chunker = Chunking_text(config=domain_config)
+        chunk_config = config_manager.get_chunking_config()
+
+        chunker = Chunking_text(
+            config=chunk_config,
+            domain_config=domain_config
+      )
+
 
         # Pass documents to chunker
         text_chunks = chunker.main(documents)

@@ -6,8 +6,8 @@ Processes uploaded documents: extracts text, chunks, and creates embeddings.
 from typing import List, Dict, Any
 from pathlib import Path
 
-from langchain.schema import Document
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_core.documents import Document
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from AI_Lawyer.config.configuration import ConfigurationManager
 from AI_Lawyer.entity.config_entity import UserUploadProcessorConfig
