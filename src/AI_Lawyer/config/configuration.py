@@ -3,15 +3,26 @@ from pathlib import Path
 from AI_Lawyer.utils.common import read_yaml, create_directories
 from AI_Lawyer.utils.logging_setup import *
 from AI_Lawyer.entity.config_entity import (
-    DataConfig, 
-    ChunkingConfig, 
-    EmbeddingConfig, 
-    LLMConfig, 
+    DataConfig,
+    ChunkingConfig,
+    EmbeddingConfig,
+    LLMConfig,
     FileExtractorConfig,
     UserUploadProcessorConfig,
     DomainChunkingConfig,
     VectorDBConfig,
-    VerificationConfig
+    VerificationConfig,
+    # additional v2 dataclasses
+    RetrievalConfig,
+    BM25Config,
+    RerankerConfig,
+    CachingConfig,
+    RateLimitConfig,
+    APIKeyConfig,
+    CORSConfig,
+    InputValidationConfig,
+    SecurityConfig,
+    LoggingConfig,
 )
 from AI_Lawyer.constants import *
 
@@ -174,10 +185,14 @@ class ConfigurationManager:
         """Get embeddings configuration."""
         config = self.config['embeddings']
         embedding_config = EmbeddingConfig(
-            model=config['model'],
-            vector_store=config['vector_store'],
-            vector_store_path=config['vector_store_path'],
-            api_key=config['api_key']
+            model=config.get('model', ''),
+            vector_store=config.get('vector_store', ''),
+            vector_store_path=config.get('vector_store_path', ''),
+            api_key=config.get('api_key', ''),
+            device=config.get('device', 'cpu'),
+            batch_size=int(config.get('batch_size', 32)),
+            dimension=int(config.get('dimension', 384)),
+            normalize=bool(config.get('normalize', True)),
         )
         return embedding_config
 
@@ -193,12 +208,13 @@ class ConfigurationManager:
         return chunking_config
 
     def get_llm_config(self) -> LLMConfig:
-        """Get LLM configuration."""
+        """Get LLM configuration, including optional prompt template."""
         config = self.config['llm']
         llm_config = LLMConfig(
-            provider=config['provider'],
-            model=config['model'],
-            api_key=config['api_key']
+            provider=config.get('provider', ''),
+            model=config.get('model', ''),
+            api_key=config.get('api_key', ''),
+            prompt_template=config.get('prompt_template', ''),
         )
         return llm_config
 
@@ -228,3 +244,95 @@ class ConfigurationManager:
             temp_index_ttl_seconds=config.get('temp_index_ttl_seconds', 3600)
         )
         return user_upload_config
+
+    # --- additional getters migrated from v2 upgrade ---
+
+    def get_retrieval_config(self) -> RetrievalConfig:
+        r = self.config.get("retrieval", {})
+        bm25_raw = r.get("bm25", {})
+        reranker_raw = r.get("reranker", {})
+        return RetrievalConfig(
+            top_k=int(r.get("top_k", 8)),
+            vector_top_k_multiplier=int(r.get("vector_top_k_multiplier", 3)),
+            hybrid_mode=bool(r.get("hybrid_mode", False)),
+            vector_weight=float(r.get("vector_weight", 0.65)),
+            bm25_weight=float(r.get("bm25_weight", 0.35)),
+            rrf_k=int(r.get("rrf_k", 60)),
+            score_threshold=float(r.get("score_threshold", 0.0)),
+            multi_query_expansion=bool(r.get("multi_query_expansion", False)),
+            num_expanded_queries=int(r.get("num_expanded_queries", 2)),
+            query_rewriting=bool(r.get("query_rewriting", False)),
+            bm25=BM25Config(
+                k1=float(bm25_raw.get("k1", 1.5)),
+                b=float(bm25_raw.get("b", 0.75)),
+                index_path=bm25_raw.get("index_path", "bm25_indices"),
+            ),
+            reranker=RerankerConfig(
+                enabled=bool(reranker_raw.get("enabled", False)),
+                model=reranker_raw.get("model", "cross-encoder/ms-marco-MiniLM-L-6-v2"),
+                device=reranker_raw.get("device", "cpu"),
+                batch_size=int(reranker_raw.get("batch_size", 16)),
+                score_threshold=float(reranker_raw.get("score_threshold", 0.0)),
+            ),
+        )
+
+    def get_caching_config(self) -> CachingConfig:
+        c = self.config.get("caching", {})
+        return CachingConfig(
+            enabled=bool(c.get("enabled", False)),
+            backend=c.get("backend", "memory"),
+            redis_host=os.environ.get("REDIS_HOST", c.get("redis_host", "localhost")),
+            redis_port=int(os.environ.get("REDIS_PORT", c.get("redis_port", 6379))),
+            redis_db=int(c.get("redis_db", 0)),
+            query_cache_ttl=int(c.get("query_cache_ttl", 3600)),
+            retrieval_cache_ttl=int(c.get("retrieval_cache_ttl", 1800)),
+            key_prefix=c.get("key_prefix", "ai_lawyer:"),
+            max_memory_items=int(c.get("max_memory_items", 500)),
+        )
+
+    def get_security_config(self) -> SecurityConfig:
+        s = self.config.get("security", {})
+        rl = s.get("rate_limiting", {})
+        ak = s.get("api_key", {})
+        cors = s.get("cors", {})
+        iv = s.get("input_validation", {})
+        pi = s.get("prompt_injection", {})
+        return SecurityConfig(
+            rate_limiting=RateLimitConfig(
+                enabled=bool(rl.get("enabled", False)),
+                requests_per_minute=int(rl.get("requests_per_minute", 60)),
+                requests_per_hour=int(rl.get("requests_per_hour", 1000)),
+                burst_limit=int(rl.get("burst_limit", 10)),
+            ),
+            api_key=APIKeyConfig(
+                enabled=bool(ak.get("enabled", False)),
+                header_name=ak.get("header_name", "X-API-Key"),
+                keys_env_var=ak.get("keys_env_var", "AILAWYER_API_KEYS"),
+                admin_key_env_var=ak.get("admin_key_env_var", "ADMIN_API_KEY"),
+            ),
+            cors=CORSConfig(
+                allow_origins=cors.get("allow_origins", ["*"]),
+                allow_methods=cors.get("allow_methods", ["*"]),
+                allow_headers=cors.get("allow_headers", ["*"]),
+                allow_credentials=bool(cors.get("allow_credentials", False)),
+            ),
+            input_validation=InputValidationConfig(
+                max_query_length=int(iv.get("max_query_length", 2000)),
+                max_file_size_mb=int(iv.get("max_file_size_mb", 50)),
+                injection_patterns_enabled=bool(iv.get("injection_patterns_enabled", True)),
+            ),
+            prompt_injection_enabled=bool(pi.get("enabled", True)),
+        )
+
+    def get_logging_config(self) -> LoggingConfig:
+        lg = self.config.get("logging", {})
+        return LoggingConfig(
+            level=lg.get("level", "INFO"),
+            format=lg.get("format", "text"),
+            file_path=lg.get("file_path", None),
+            max_bytes=int(lg.get("max_bytes", 10485760)),
+            backup_count=int(lg.get("backup_count", 5)),
+            include_request_id=bool(lg.get("include_request_id", True)),
+            mlflow_tracking_uri=lg.get("mlflow_tracking_uri", "mlruns"),
+            mlflow_experiment=lg.get("mlflow_experiment", "ai_lawyer"),
+        )

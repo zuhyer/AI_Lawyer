@@ -1,5 +1,14 @@
 import os 
-import joblib
+
+# joblib is an optional dependency; some environments (CI/minimal containers)
+# may not have it installed.  we guard the import so that importing this
+# module never fails.  functions that require serialization will raise at
+# runtime if the backend is missing.
+try:
+    import joblib
+except ImportError:  # pragma: no cover - environment may or may not have it
+    joblib = None
+
 import yaml
 import json 
 import hashlib
@@ -91,19 +100,25 @@ def load_json(path: Path) -> ConfigBox:
 
 @ensure_annotations
 def save_bin(data: Any, path: Path):
-    """save binary file
+    """save binary file (joblib optional fallback to pickle).
 
     Args:
         data (Any): data to be saved as binary
         path (Path): path to binary file
     """
-    joblib.dump(value=data, filename=path)
+    if joblib is not None:
+        joblib.dump(value=data, filename=path)
+    else:
+        # simple pickle fallback for environments without joblib
+        import pickle
+        with open(path, "wb") as f:
+            pickle.dump(data, f)
     logger.info(f"binary file saved at: {path}")
 
 
 @ensure_annotations
 def load_bin(path: Path) -> Any:
-    """load binary data
+    """load binary data (joblib optional fallback to pickle).
 
     Args:
         path (Path): path to binary file
@@ -111,7 +126,12 @@ def load_bin(path: Path) -> Any:
     Returns:
         Any: object stored in the file
     """
-    data = joblib.load(path)
+    if joblib is not None:
+        data = joblib.load(path)
+    else:
+        import pickle
+        with open(path, "rb") as f:
+            data = pickle.load(f)
     logger.info(f"binary file loaded from: {path}")
     return data
 

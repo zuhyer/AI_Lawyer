@@ -7,6 +7,7 @@ from typing import Tuple, Dict, List
 from pathlib import Path
 from langchain_community.vectorstores import FAISS
 from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
 
 from AI_Lawyer.config.configuration import ConfigurationManager
 from AI_Lawyer.utils.logging_setup import logger
@@ -18,12 +19,21 @@ class QueryRouter:
     Classifies queries and loads domain-specific FAISS indices.
     """
     
-    # Domain keywords for classification
+    # Domain keywords for classification (see weights in classify_query)
     DOMAIN_KEYWORDS = {
         'constitution': [
             'article', 'constitution', 'fundamental rights', 'directive principles',
             'appendix', 'schedule', 'preamble', 'amendment', 'rajya sabha', 'lok sabha',
-            'governor', 'president', 'voting rights', 'citizenship'
+            'governor', 'president', 'voting rights', 'citizenship', 'constitutional',
+            'basic structure', 'constitutional amendments', 'part', 'chapter', 'supreme court',
+            'judicial review', 'constitutional law', 'fundamental duty', 'directive principle',
+            'right to equality', 'right to freedom', 'right to life', 'right to property',
+            'right to constitutional remedies', 'freedom of speech', 'freedom of religion',
+            'freedom of movement', 'right against exploitation', 'right to education',
+            'cultural and educational rights', 'right to work', 'social security',
+            'state policy', 'reservation', 'sc st obc', 'affirmative action',
+            'constitutional bodies', 'union territory', 'centre state relations',
+            'emergency provisions', 'constitutional emergency', 'constitutional validity'
         ],
         'bns_criminal_law': [
             'section', 'bns', 'offence', 'crime', 'criminal', 'punishment', 'bail',
@@ -91,6 +101,59 @@ class QueryRouter:
         
         logger.info("✅ QueryRouter initialized")
     
+    def preprocess_query(self, query: str) -> str:
+        """Clean and normalize user query before classification.
+
+        - Lowercases text
+        - Removes punctuation
+        - Expands common abbreviations
+        - Strips extra whitespace
+        """
+        import re
+
+        q = query.lower()
+        # remove punctuation
+        q = re.sub(r"[^\w\s]", " ", q)
+
+        # expand some known abbreviations into full forms to aid keyword matching
+        expansions = {
+            'fir': 'first information report',
+            'bns': 'bharatiya nyaya sanha',
+            'bnss': 'bharatiya nagarik suraksha sanhita',
+            'sc': 'supreme court',
+            'st': 'scheduled tribe',
+            'obc': 'other backward class',
+        }
+        for abbr, full in expansions.items():
+            q = re.sub(rf"\b{abbr}\b", full, q)
+
+        # collapse whitespace
+        q = re.sub(r"\s+", " ", q).strip()
+        return q
+
+    def apply_domain_boosters(self, scores: Dict[str, float], query: str) -> Dict[str, float]:
+        """Lightweight rule-based boosting for certain domain signals."""
+        query_lower = query.lower()
+        boosted = scores.copy()
+
+        # constitution booster: presence of 'article' or 'amendment'
+        if 'article' in query_lower or 'amendment' in query_lower:
+            boosted['constitution'] = boosted.get('constitution', 0) * 1.3
+
+        # criminal law booster: explicit 'section' with crime terms
+        if 'section' in query_lower and any(w in query_lower for w in ['offence', 'crime', 'punishment']):
+            boosted['bns_criminal_law'] = boosted.get('bns_criminal_law', 0) * 1.2
+
+        # procedure booster: words like 'process' or 'steps'
+        if any(w in query_lower for w in ['process', 'step', 'procedure', 'filing']):
+            boosted['procedure_guides_db'] = boosted.get('procedure_guides_db', 0) * 1.2
+
+        # template booster: presence of 'template' or 'format'
+        if any(w in query_lower for w in ['template', 'format', 'draft', 'sample']):
+            boosted['legal_templates_db'] = boosted.get('legal_templates_db', 0) * 1.4
+
+        return boosted
+
     def classify_query(self, query: str) -> Tuple[str, float]:
         """
         Classify query into appropriate domain using keyword matching and semantic similarity.
@@ -101,13 +164,17 @@ class QueryRouter:
         Returns:
             Tuple of (domain_name, confidence_score)
         """
-        query_lower = query.lower()
+        prepped = self.preprocess_query(query)
+        query_lower = prepped
         
         # Step 1: Keyword-based scoring
         keyword_scores = {}
         for domain, keywords in self.DOMAIN_KEYWORDS.items():
             score = sum(1 for keyword in keywords if keyword in query_lower)
             keyword_scores[domain] = score
+
+        # apply rule-based boosters
+        keyword_scores = self.apply_domain_boosters(keyword_scores, query_lower)
         
         # If clear keyword match, use it
         max_keyword_score = max(keyword_scores.values()) if keyword_scores else 0
@@ -119,7 +186,7 @@ class QueryRouter:
         
         # Step 2: Semantic similarity fallback
         try:
-            query_embedding = self.embedding_model.encode(query)
+            query_embedding = self.embedding_model.encode(prepped)
             
             # Get representative terms for each domain
             domain_terms = {
@@ -132,7 +199,6 @@ class QueryRouter:
             for domain, terms in domain_terms.items():
                 terms_embedding = self.embedding_model.encode(terms)
                 # Simple cosine similarity
-                from sklearn.metrics.pairwise import cosine_similarity
                 sim = cosine_similarity([query_embedding], [terms_embedding])[0][0]
                 similarities[domain] = sim
             
@@ -143,7 +209,8 @@ class QueryRouter:
             return top_domain, confidence
             
         except Exception as e:
-            logger.warning(f"Semantic classification failed: {e}. Using default domain.")
+            logger.error(f"❌ Semantic classification failed: {e}", exc_info=True)
+            logger.warning(f"Falling back to default domain: 'bns_criminal_law'")
             return 'bns_criminal_law', 0.5  # Default to criminal law
     
     def load_domain_index(self, domain: str, force_reload: bool = False) -> FAISS:

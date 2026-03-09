@@ -25,4 +25,10 @@ starlette
 streamlit
 uvicorn
 
+# optional dependencies required by upgraded components (v2)
+# these libraries support hybrid retrieval, caching and observability
+rank-bm25
+redis
+mlflow
+
 -e .

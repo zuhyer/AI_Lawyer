@@ -1,28 +1,130 @@
+# =============================================================================
+# AI LAWYER — Production Configuration v2.0
+# All parameters read by ConfigurationManager. No hardcoded values in code.
+# Secrets come from environment variables (see .env.example).
+# =============================================================================
+
+# ── Data ─────────────────────────────────────────────────────────────────────
 data:
-  # Root directory for all artifacts and data
   root_dir: "/workspaces/AI_Lawyer/artifacts"
-  
-  # Directory containing local PDF, DOCX, and TXT files
-  # This directory is scanned when source_url is empty (LOCAL DATA MODE)
   pdf_directory: "/workspaces/AI_Lawyer/artifacts/data"
-  
-  # source_url: URLs for dynamic data ingestion (LEGACY MODE)
-  # - If source_url contains URLs: downloads files from URLs
-  # - If source_url is empty ([]): scans local pdf_directory for files
-  # Supported local file formats: pdf, docx, txt
   source_url: []
 
+# ── Embeddings ────────────────────────────────────────────────────────────────
 embeddings:
-  model: "all-MiniLM-L6-v2"
-  vector_store: "FAISS"
+  model: "BAAI/bge-large-en-v1.5"   # upgraded from all-MiniLM-L6-v2
+  device: "cpu"                       # cpu | cuda | mps
+  batch_size: 32
+  dimension: 1024                     # MUST match model output; 384 for MiniLM
+  normalize: true
+  vector_store: "faiss"               # faiss | qdrant
   vector_store_path: "vector_db"
-  api_key: ""  # not required for local sentence-transformers
 
+# ── Vector Database ───────────────────────────────────────────────────────────
+vector_db:
+  provider: "faiss"                   # faiss | qdrant
+  # Qdrant settings (used when provider=qdrant)
+  qdrant_host: "localhost"
+  qdrant_port: 6333
+  qdrant_grpc_port: 6334
+  distance_metric: "Cosine"           # Cosine | Dot | Euclid
+  on_disk_payload: false
+  # Shared settings
+  base_path: "vector_db"
+  default_top_k: 8
+  domains:
+    - constitution
+    - bns_criminal_law
+    - bnss_procedure
+    - sakshya_evidence
+    - case_law_sc_recent
+    - procedure_guides_db
+    - legal_templates_db
+
+# ── Retrieval ─────────────────────────────────────────────────────────────────
+retrieval:
+  top_k: 8
+  vector_top_k_multiplier: 3          # fetch top_k * N before reranking
+  hybrid_mode: true                   # enable BM25 + dense fusion
+  vector_weight: 0.65
+  bm25_weight: 0.35
+  rrf_k: 60                           # RRF constant
+  score_threshold: 0.0                # minimum score to include chunk
+  multi_query_expansion: true
+  num_expanded_queries: 2
+  query_rewriting: true
+  bm25:
+    k1: 1.5
+    b: 0.75
+    index_path: "bm25_indices"
+  reranker:
+    enabled: true
+    model: "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    device: "cpu"
+    batch_size: 16
+    score_threshold: 0.0
+
+# ── Caching ───────────────────────────────────────────────────────────────────
+caching:
+  enabled: true
+  backend: "redis"                    # redis | memory
+  redis_host: "localhost"             # overridden by REDIS_HOST env var
+  redis_port: 6379                    # overridden by REDIS_PORT env var
+  redis_db: 0
+  query_cache_ttl: 3600               # seconds
+  retrieval_cache_ttl: 1800
+  key_prefix: "ai_lawyer:"
+  max_memory_items: 500               # in-memory fallback LRU size
+
+# ── Security ──────────────────────────────────────────────────────────────────
+security:
+  rate_limiting:
+    enabled: true
+    requests_per_minute: 30
+    requests_per_hour: 500
+    burst_limit: 10
+  api_key:
+    enabled: true
+    header_name: "X-API-Key"
+    keys_env_var: "AILAWYER_API_KEYS"   # comma-separated keys in env
+    admin_key_env_var: "ADMIN_API_KEY"
+  cors:
+    allow_origins:
+      - "http://localhost:3000"
+      - "http://localhost:8080"
+    allow_methods: ["GET", "POST", "OPTIONS"]
+    allow_headers: ["*"]
+    allow_credentials: false
+  input_validation:
+    max_query_length: 2000
+    max_file_size_mb: 50
+    injection_patterns_enabled: true
+  prompt_injection:
+    enabled: true
+    semantic_guard: false             # uses extra LLM call if true
+
+# ── Logging ───────────────────────────────────────────────────────────────────
+logging:
+  level: "INFO"                       # DEBUG | INFO | WARNING | ERROR
+  format: "json"                      # json | text
+  file_path: "logs/ai_lawyer.log"     # set to null to disable
+  max_bytes: 10485760                 # 10 MB
+  backup_count: 5
+  include_request_id: true
+  mlflow_tracking_uri: "mlruns"       # local dir or remote URI
+  mlflow_experiment: "ai_lawyer_prod"
+
+# ── LLM ──────────────────────────────────────────────────────────────────────
 llm:
-  provider: "groq"
+  provider: "g"
   model: "llama-3.3-70b-versatile"
-  api_key: "!secret response_model_API_Key"
+  api_key: "!secret GROQ_API_KEY"     # reads env var GROQ_API_KEY
+  temperature: 0.1
+  max_tokens: 2048
+  request_timeout: 60
+  context_window_tokens: 6000
 
+# ── File Extraction ───────────────────────────────────────────────────────────
 file_extraction:
   supported_formats:
     - "pdf"
@@ -39,24 +141,12 @@ file_extraction:
   log_extraction_details: true
   batch_processing: true
 
+# ── User Upload ───────────────────────────────────────────────────────────────
 user_upload_processor:
   max_upload_size_mb: 50
   temp_index_ttl_seconds: 3600
 
-# Vector Database Configuration (Domain-Separated)
-vector_db:
-  base_path: "vector_db"
-  default_top_k: 8
-  domains:
-    - constitution
-    - bns_criminal_law
-    - bnss_procedure
-    - sakshya_evidence
-    - case_law_sc_recent
-    - procedure_guides_db
-    - legal_templates_db
-
-# Verification Pipeline Configuration
+# ── Verification ──────────────────────────────────────────────────────────────
 verification:
   min_confidence_threshold: 0.65
   enable_citation_validation: true
@@ -67,56 +157,54 @@ verification:
     - Schedule
     - Case Law
 
-# Domain-Specific Chunking Configuration
+# ── Domain Chunking ───────────────────────────────────────────────────────────
 chunking:
   constitution:
-    data_source: "/workspaces/AI_Lawyer/artifacts/data/20240716890312078.pdf"
+    data_source: "/workspaces/AI_Lawyer/artifacts/data/20240716890312078.pdf"  # Update this path
     chunk_size: 700
     chunk_overlap: 80
     strategy: "article_based"
     description: "Constitution of India - Article-based chunking"
-  
+
   bns_criminal_law:
     data_source: "/workspaces/AI_Lawyer/artifacts/data/The Bharatiya Nyaya Sanhita, 2023.pdf"
     chunk_size: 600
     chunk_overlap: 50
     strategy: "section_based"
     description: "BNS Criminal Law - Section-based chunking"
-  
+
   bnss_procedure:
     data_source: "/workspaces/AI_Lawyer/artifacts/data/The Bharatiya Nagarik Suraksha Sanhita, 2023.pdf"
     chunk_size: 650
     chunk_overlap: 60
     strategy: "section_based"
     description: "BNSS Procedure - Section-based chunking"
-  
+
   sakshya_evidence:
     data_source: "/workspaces/AI_Lawyer/artifacts/data/The Bharatiya Sakshya Bill, 2023.pdf"
     chunk_size: 600
     chunk_overlap: 50
     strategy: "section_based"
     description: "Sakshya Evidence Act - Section-based chunking"
-  
+
   case_law_sc_recent:
     data_source: "/workspaces/AI_Lawyer/artifacts/data/6.LANDMARK JUDGMENTS OF THE SUPREME COURT PLAIN.pdf"
     chunk_size: 1000
     chunk_overlap: 120
     strategy: "case_structure_based"
     description: "Recent Supreme Court Case Law - Case structure-based chunking"
-  
+
   procedure_guides_db:
     data_source: "/workspaces/AI_Lawyer/artifacts/data/2024_06_21T21_29_25_criminal_rules_practise_1990.pdf"
     chunk_size: 800
     chunk_overlap: 100
     strategy: "rule_based"
     description: "Procedure Guides - Rule-based chunking"
-  
+
   legal_templates_db:
-    # For the new dataset we ingest one template file at a time and DO NOT chunk.
-    # Set `preserve_full_document: true` so downstream components skip chunking.
-    data_source: "/workspaces/AI_Lawyer/artifacts/data/templates/1076-0094_Application-Dissolution-Marraige_Exp.11.30.2024_504.pdf"
+    data_source: "/workspaces/AI_Lawyer/artifacts/data/templates"
     chunk_size: 1000
     chunk_overlap: 0
     strategy: "non_chunked"
     preserve_full_document: true
-    description: "Legal Templates - preserve full document; ingest single file only"
+    description: "Legal Templates - preserve full document"

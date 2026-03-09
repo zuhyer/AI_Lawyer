@@ -1,36 +1,55 @@
+import os
 import yaml
 from pathlib import Path
 from AI_Lawyer.utils.logging_setup import logger
 
 
-def resolve_secret(value: str, secret_path="/workspaces/AI_Lawyer/config/secret.yaml"):
+def resolve_secret(
+    value: str,
+    secret_path: str = "/workspaces/AI_Lawyer/config/secret.yaml",
+) -> str:
+    """Resolve a '!secret KEY_NAME' reference with priority order.
+
+    Resolution order:
+    1. If value does NOT start with '!secret ' — return as-is.
+    2. Extract KEY_NAME from '!secret KEY_NAME'.
+    3. Check os.environ[KEY_NAME] — return if set (non-empty).
+    4. Fall back to secret.yaml file.
+    5. Log error and return '' if neither found (never raises in prod).
+
+    Args:
+        value: Raw config value, possibly a '!secret ...' reference.
+        secret_path: Path to secret.yaml (optional fallback).
+
+    Returns:
+        Resolved secret string, or '' if not found.
     """
-    Resolves values like "!secret KEY_NAME" from secret.yaml
-    Example:
-        api_key: "!secret Gemini_API_Key"
-    """
+    if not isinstance(value, str) or not value.startswith("!secret "):
+        return value or ""
 
-    # Check if the value is a secret reference
-    if isinstance(value, str) and value.startswith("!secret"):
-        key = value.split()[1]  # extract KEY_NAME
+    key = value.split(maxsplit=1)[1].strip()
 
-        secret_file = Path(secret_path)
+    # Priority 1: environment variable
+    env_val = os.environ.get(key, "")
+    if env_val:
+        logger.debug(f"Secret '{key}' resolved from environment variable")
+        return env_val
 
-        if not secret_file.exists():
-            raise FileNotFoundError(f"Secret file not found: {secret_file}")
-
+    # Priority 2: secret.yaml
+    secret_file = Path(secret_path)
+    if secret_file.exists():
         try:
-            with open(secret_file, "r") as file:
-                secrets = yaml.safe_load(file)
-
-            if key not in secrets:
-                raise KeyError(f"Secret key '{key}' not found in secret.yaml")
-
-            return secrets[key]
-
+            with open(secret_file, "r") as f:
+                secrets = yaml.safe_load(f) or {}
+            if key in secrets and secrets[key]:
+                logger.debug(f"Secret '{key}' resolved from secret.yaml")
+                return str(secrets[key])
         except Exception as e:
-            logger.error(f"Error loading secret key '{key}': {e}")
-            raise e
+            logger.warning(f"Failed to read secret.yaml: {e}")
 
-    # If value is normal (not secret reference)
-    return value
+    # Neither found
+    logger.error(
+        f"Secret '{key}' not found in environment or secret.yaml. "
+        f"Set the environment variable {key} in your .env file."
+    )
+    return ""

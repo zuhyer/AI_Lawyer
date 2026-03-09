@@ -7,6 +7,7 @@ from langchain_community.vectorstores import FAISS
 from AI_Lawyer.entity.config_entity import LLMConfig
 from AI_Lawyer.utils.logging_setup import logger
 from AI_Lawyer.utils.secret_loader import resolve_secret
+# (secret_loader now handles environment and file resolution automatically)
 
 
 class QueryComponent:
@@ -28,26 +29,23 @@ class QueryComponent:
             groq_api_key=api_key
         )
 
-        self.prompt_template = ChatPromptTemplate.from_template(
-            self._get_prompt()
+        # prompt may be supplied via config; otherwise use default template
+        template_str = (
+            self.llm_config.prompt_template
+            if getattr(self.llm_config, 'prompt_template', '')
+            else self._get_prompt()
         )
+        self.prompt_template = ChatPromptTemplate.from_template(template_str)
 
     def _get_prompt(self) -> str:
-        return """
-You are an AI Legal Research Assistant.
-
-Use provided legal context first.
-If insufficient say:
-"The provided documents do not contain enough information."
-
-QUESTION:
-{question}
-
-CONTEXT:
-{context}
-
-ANSWER:
-"""
+        # default hard‑coded prompt; overridden by config if supplied
+        # includes instructions for template generation when relevant
+        return """\
+You are an AI Legal Research Assistant.\n\nUse provided legal context first.\nIf insufficient say:\n\"The provided documents do not contain enough information.\"\n\nWhen the query relates to generating a legal template or format,
+provide a clear, structured document with placeholders for the user
+(e.g. <PartyA>, <Date>, <Signature>). Use sections/headings as
+appropriate and include any explanatory comments.\n
+QUESTION:\n{question}\n\nCONTEXT:\n{context}\n\nANSWER:\n"""
 
     # SAFE RETRIEVAL
     def retrieve_docs(
@@ -129,7 +127,17 @@ ANSWER:
 
         context = self.get_context(docs)
 
-        chain = self.prompt_template | self.llm
+        # if templates domain, use stronger prompt instructions
+        if domain == 'legal_templates_db':
+            prompt_text = (
+                "You are an expert legal template generator. "
+                "Produce the full template with placeholders and logic, "
+                "based on question and context.\n\nQUESTION:\n{question}\n\nCONTEXT:\n{context}\n\nANSWER:\n"
+            )
+            template = ChatPromptTemplate.from_template(prompt_text)
+            chain = template | self.llm
+        else:
+            chain = self.prompt_template | self.llm
 
         response = chain.invoke(
             {"question": query, "context": context}
@@ -179,10 +187,21 @@ ANSWER:
                 {"question": question, "context": context}
             )
 
+            # return detailed source list rather than just a count (bug fix)
+            source_list = []
+            for i, doc in enumerate(combined_docs):
+                meta = doc.metadata if isinstance(doc.metadata, dict) else {}
+                source_list.append({
+                    "text": doc.page_content,
+                    "source_name": meta.get("source_file"),
+                    "score": meta.get("score"),
+                    "source_type": meta.get("source_type"),
+                    "chunk_index": meta.get("chunk_index"),
+                })
             return {
                 "success": True,
                 "answer": response.content,
-                "sources": len(combined_docs)
+                "sources": source_list,
             }
 
         except Exception as e:

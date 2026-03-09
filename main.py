@@ -1,4 +1,5 @@
 import sys
+import os
 import logging
 from pathlib import Path
 
@@ -7,6 +8,7 @@ from pathlib import Path
 # ============================================================
 
 from AI_Lawyer.config.configuration import ConfigurationManager
+
 from AI_Lawyer.utils.logging_setup import logger as project_logger
 
 from AI_Lawyer.pipeline.stage02_Textsplitting import (
@@ -14,7 +16,7 @@ from AI_Lawyer.pipeline.stage02_Textsplitting import (
     start_chunking_pipeline,
 )
 
-# 🔥 IMPORTANT: Import class directly (no wrapper functions)
+# 🔥 IMPORTANT: Import classes directly (no wrapper functions)
 from AI_Lawyer.pipeline.stage03_embedding_creation import EmbeddingCreator
 
 # ============================================================
@@ -93,6 +95,10 @@ def main():
         raise FileNotFoundError(f"Config not found: {CONFIG_PATH}")
 
     config_manager = ConfigurationManager()
+    llm_cfg = config_manager.get_llm_config()
+    # show prompt template if provided
+    if llm_cfg.prompt_template:
+        logger.info("LLM prompt template loaded from config")
     vector_db_config = config_manager.get_vector_db_config()
 
     domains = vector_db_config.domains

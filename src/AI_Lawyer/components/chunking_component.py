@@ -12,7 +12,7 @@ class Data_Loader:
         self.pdf_dir = Path(self.config.pdf_directory)
 
     # =========================
-    # Load Single File
+    # Load Single File or Directory
     # =========================
     def load_single_file(self, file_path: str):
 
@@ -22,9 +22,32 @@ class Data_Loader:
             file_path_obj = Path(file_path)
 
             if not file_path_obj.exists():
-                logger.error(f"File not found: {file_path}")
+                logger.error(f"File/directory not found: {file_path}")
                 return documents
 
+            # Check if it's a directory (for templates)
+            if file_path_obj.is_dir():
+                logger.info(f"📁 Loading directory: {file_path}")
+                # Load all supported files from directory
+                for file_path in file_path_obj.rglob('*'):
+                    if file_path.is_file() and file_path.suffix.lower() in ['.pdf', '.docx', '.txt']:
+                        try:
+                            loader = PDFPlumberLoader(str(file_path))
+                            docs = loader.load()
+
+                            # 🔥 Inject metadata
+                            for doc in docs:
+                                doc.metadata["domain"] = self.domain
+                                doc.metadata["source_file"] = file_path.name
+
+                            documents.extend(docs)
+                            logger.info(f"✅ Loaded {file_path.name} | Domain={self.domain}")
+
+                        except Exception as e:
+                            logger.error(f"Error loading file {file_path}: {e}")
+                return documents
+
+            # Single file loading (existing logic)
             loader = PDFPlumberLoader(str(file_path_obj))
             docs = loader.load()
 
@@ -40,7 +63,7 @@ class Data_Loader:
             )
 
         except Exception as e:
-            logger.error(f"Error loading file {file_path}: {e}")
+            logger.error(f"Error loading file/directory {file_path}: {e}")
 
         return documents
 

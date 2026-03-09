@@ -5,12 +5,52 @@ from AI_Lawyer.utils.logging_setup import logger
 from langchain_community.vectorstores import FAISS
 from langchain.embeddings.base import Embeddings
 
-# Local Sentence-Transformer based embeddings (all-MiniLM-L6-v2)
+# sentence-transformers + numpy availability
 try:
     from sentence_transformers import SentenceTransformer
     import numpy as np
-except Exception:
-    SentenceTransformer = None
+    _ST_AVAILABLE = True
+except ImportError:
+    SentenceTransformer = None  # type: ignore
+    np = None  # type: ignore
+    _ST_AVAILABLE = False
+
+
+def validate_index_dimension(
+    faiss_index_path: Path,
+    embedding_model,
+    config_dimension: int,
+) -> None:
+    """Ensure stored FAISS index dimension matches model output & config.
+
+    Raises ValueError on mismatch; non-fatal when index does not exist yet.
+    """
+    index_faiss = faiss_index_path / "index.faiss"
+    if not index_faiss.exists():
+        return
+    try:
+        import faiss as _faiss  # type: ignore
+        idx = _faiss.read_index(str(index_faiss))
+        stored_dim = idx.d
+        model_dim = embedding_model.dimension
+        if stored_dim != model_dim:
+            raise ValueError(
+                f"FAISS index dimension mismatch!\n"
+                f"  Stored index: {stored_dim} dimensions\n"
+                f"  Current model: {model_dim} dimensions ({embedding_model.model_name})\n"
+                f"  Config says: {config_dimension} dimensions\n"
+                f"Delete the index and re-run ingestion to rebuild."
+            )
+        if model_dim != config_dimension:
+            logger.warning(
+                f"Config dimension ({config_dimension}) does not match model output ({model_dim})."
+            )
+        logger.info(f"✅ Dimension check passed: {stored_dim}d for {faiss_index_path.name}")
+    except ValueError:
+        raise
+    except Exception as e:
+        logger.warning(f"Could not validate FAISS dimension: {e}")
+
 
 
 class LocalSentenceTransformerEmbeddings(Embeddings):
@@ -21,13 +61,17 @@ class LocalSentenceTransformerEmbeddings(Embeddings):
     """
 
     def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
-        if SentenceTransformer is None:
+        if not _ST_AVAILABLE or SentenceTransformer is None:
             raise ImportError(
                 "sentence-transformers is not installed. Install it with `pip install sentence-transformers`"
             )
         self.model_name = model_name
         logger.info(f"Initializing local SentenceTransformer model: {model_name}")
         self.model = SentenceTransformer(model_name)
+        # probe a dummy embedding to capture output dimension
+        probe = self.model.encode(["test"], convert_to_numpy=True)
+        self.dimension: int = int(probe.shape[1])
+        logger.info(f"Embedding model ready — dimension={self.dimension}")
 
     def embed_documents(self, texts):
         # sentence-transformers returns ndarray; convert to list[list[float]]
@@ -66,10 +110,17 @@ class EmbeddingCreator:
             self.db_path = Path(config.vector_store_path)
 
     def get_embedding_model(self):
-        """Return a local sentence-transformers based embeddings instance."""
+        """Return a local sentence-transformers based embeddings instance.
+
+        Also perform dimension validation against existing FAISS index and
+        configuration.  This will raise if dimensions mismatch.
+        """
         try:
             logger.info(f"Initializing local embedding model: {self.model_name}")
-            return LocalSentenceTransformerEmbeddings(self.model_name)
+            model = LocalSentenceTransformerEmbeddings(self.model_name)
+            # if the config specifies a dimension, validate index consistency
+            validate_index_dimension(self.db_path, model, self.config.dimension)
+            return model
         except Exception as e:
             logger.error(f"Failed to initialize local embedding model: {e}")
             raise
